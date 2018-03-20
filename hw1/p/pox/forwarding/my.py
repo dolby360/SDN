@@ -2,13 +2,17 @@ from pox.core import core
 import pox.openflow.libopenflow_01 as of
 from pox.lib.util import dpidToStr
 from pox.openflow import *
+import csv
 
 table = {}
+
+
 all_ports = of.OFPP_FLOOD
 log = core.getLogger()
 
 def _handle_PacketIn(event):
   packet = event.parsed
+
 
   # Learn the source
   table[(event.connection, packet.src)] = event.port
@@ -29,7 +33,22 @@ def _handle_PacketIn(event):
     msg.match.dl_dst = packet.src
 
     msg.match.dl_src = packet.dst
-    print "Packet from MAC : " +str(packet.dst)
+
+
+    destinationMAC = str(packet.dst)
+    sourceMAC = str(packet.src)
+
+
+    ### READING file from csv file
+    with open('../firewall-policies.csv') as csvfile:
+      firewallRules = csv.DictReader(csvfile)
+      for row in firewallRules:
+        if (sourceMAC == row['mac_0'] or sourceMAC==row['mac_1']) and (destinationMAC == row['mac_0'] or destinationMAC==row['mac_1']) :
+          print "DROP PACKET"
+
+
+
+
 
 
     msg.actions.append(of.ofp_action_output(port=event.port))
