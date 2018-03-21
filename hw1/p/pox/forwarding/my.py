@@ -1,9 +1,10 @@
+
 from pox.core import core
 import pox.openflow.libopenflow_01 as of
 from pox.lib.util import dpidToStr
 from pox.openflow import *
 import csv
-
+firewallRules={}
 table = {}
 
 
@@ -11,7 +12,28 @@ all_ports = of.OFPP_FLOOD
 log = core.getLogger()
 
 def _handle_PacketIn(event):
+  def drop(duration=None):
+    """
+    Drops this packet and optionally installs a flow to continue
+    dropping similar ones for a while
+    """
+    if duration is not None:
+      if not isinstance(duration, tuple):
+        duration = (duration, duration)
+      msg = of.ofp_flow_mod()
+      msg.match = of.ofp_match.from_packet(packet)
+      msg.idle_timeout = duration[0]
+      msg.hard_timeout = duration[1]
+      msg.buffer_id = event.ofp.buffer_id
+      event.connection.send(msg)
+    elif event.ofp.buffer_id is not None:
+      msg = of.ofp_packet_out()
+      msg.buffer_id = event.ofp.buffer_id
+      msg.in_port = event.port
+      msg.in_port = event.port
+      event.connection.send(msg)
   packet = event.parsed
+
 
 
   # Learn the source
@@ -39,17 +61,8 @@ def _handle_PacketIn(event):
     sourceMAC = str(packet.src)
 
 
-    ### READING file from csv file
-    with open('../firewall-policies.csv') as csvfile:
-      firewallRules = csv.DictReader(csvfile)
-      for row in firewallRules:
-        if (sourceMAC == row['mac_0'] or sourceMAC==row['mac_1']) and (destinationMAC == row['mac_0'] or destinationMAC==row['mac_1']) :
-          print "DROP PACKET"
-
-
-
-
-
+    if (sourceMAC, destinationMAC) in firewallRules.values() or (destinationMAC, sourceMAC) in firewallRules.values():
+      print "DROP"
 
     msg.actions.append(of.ofp_action_output(port=event.port))
     event.connection.send(msg)
@@ -65,6 +78,7 @@ def _handle_PacketIn(event):
 
     log.debug("Installing %s <-> %s" % (packet.src, packet.dst))
 
+
 def _handle_ConnectionUp (event):
   print "Switch with dpid=%s connected" % dpidToStr(event.dpid)
 
@@ -73,6 +87,11 @@ def _handle_ConnectionDown(event):
 
 
 def launch ():
+  with open('../firewall-policies.csv') as csvfile:
+    reader = csv.DictReader(csvfile)
+    for row in reader:
+      firewallRules[row['id']] = row['mac_0'], row['mac_1']
+
   core.openflow.addListenerByName("ConnectionUp", _handle_ConnectionUp)
   core.openflow.addListenerByName("PacketIn", _handle_PacketIn)
   core.openflow.addListenerByName("ConnectionDown", _handle_ConnectionDown)
