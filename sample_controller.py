@@ -227,6 +227,8 @@ def checkIfNeedToDrop(event):
     fm.idle_timeout = 100
     event.connection.send(fm)
 
+    print 'Communication between {} and {} is forbidden'.format(pol[1],pol[2])
+
 def getPolicies():
   filePath = os.getcwd() + '/ext/firewall-policies.csv'
   with open(filePath) as f:

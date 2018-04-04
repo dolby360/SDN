@@ -25,10 +25,10 @@ class SampleTopology(Topo):
         # Add links
         self.addLink(h1,s1,port1=1, port2=3)
         self.addLink(h2,s1,port1=1, port2=4)
-        self.addLink(s1,s2,port1=1, port2=1)
-        self.addLink(s1,s3,port1=2, port2=1)
-        self.addLink(s3,s4,port1=2, port2=2)
-        self.addLink(s2,s4,port1=2, port2=1)
+        self.addLink(s1,s2,port1=1, port2=1, bw=1)
+        self.addLink(s1,s3,port1=2, port2=1, bw=10)
+        self.addLink(s3,s4,port1=2, port2=2, bw=10)
+        self.addLink(s2,s4,port1=2, port2=1, bw=1)
         self.addLink(s4,h4,port1=4, port2=1)
         self.addLink(s4,h3,port1=3, port2=1)
 
