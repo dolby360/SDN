@@ -3,6 +3,10 @@ from pox.lib.util import dpidToStr
 from pox.openflow import *
 from pox.lib.addresses import IPAddr, EthAddr
 from pox.lib.packet import *
+import csv
+import os
+
+policies = []
 
 #-------------------------------ARP--------------------------------------#
 def getMacByIp(i):
@@ -133,7 +137,6 @@ def siteB(event):
   for item in direction:
     #create flow match rule
     match = of.ofp_match()
-    print str(item[0]) + " " + str(item[1]) + " " + str(item[2])
     match.dl_src = EthAddr(item[0])
     match.dl_dst = EthAddr(item[1])
 
@@ -199,31 +202,54 @@ def routeThisPacket(event):
 
 #------------------------------------------------------------------------#
 
+#---------------------------FIREWALL-------------------------------------#
 def checkIfNeedToDrop(event):
-  match = of.ofp_match()
-  match.dl_src = EthAddr('00:00:00:00:00:01')
-  match.dl_dst = EthAddr('00:00:00:00:00:02')
-  
-  fm = of.ofp_flow_mod()
-  fm.match = match
-  fm.hard_timeout = 300
-  fm.idle_timeout = 100
-  #fm.actions.append(of.ofp_action_output(port=2))
-  event.connection.send(fm)
+  for pol in policies:
+    #Forbid one way of sending by droping the packet
+    match = of.ofp_match()
+    match.dl_src = EthAddr(pol[1])
+    match.dl_dst = EthAddr(pol[2])
+    
+    fm = of.ofp_flow_mod()
+    fm.match = match
+    fm.hard_timeout = 300
+    fm.idle_timeout = 100
+    event.connection.send(fm)
 
+    #Forbid the other way by droping the packet
+    match = of.ofp_match()
+    match.dl_src = EthAddr(pol[2])
+    match.dl_dst = EthAddr(pol[1])
+    
+    fm = of.ofp_flow_mod()
+    fm.match = match
+    fm.hard_timeout = 300
+    fm.idle_timeout = 100
+    event.connection.send(fm)
+
+def getPolicies():
+  filePath = os.getcwd() + '/ext/firewall-policies.csv'
+  with open(filePath) as f:
+    reader = csv.reader(f)
+    for row in reader:
+      if row[0] != 'id':
+        policies.append(row)
+#------------------------------------------------------------------------#
 
 def _handle_PacketIn(event):
   arpRequest(event)
-  #checkIfNeedToDrop(event)
+
 def _handle_ConnectionUp (event):
   print "Switch with dpid=%s connected" % dpidToStr(event.dpid)
   routeThisPacket(event)
+  checkIfNeedToDrop(event)
   
 def _handle_ConnectionDown(event):
   print "Switch %s disconnected" % dpidToStr(event.dpid)
 
 
 def launch ():
+  getPolicies()
   core.openflow.addListenerByName("ConnectionUp", _handle_ConnectionUp)
   core.openflow.addListenerByName("PacketIn", _handle_PacketIn)
   core.openflow.addListenerByName("ConnectionDown", _handle_ConnectionDown)
