@@ -5,6 +5,7 @@
       <sourceFolder url="file://$MODULE_DIR$/pox-carp/pox" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/pox-carp" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/pox-carp/ext" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/hw2/pox-carp" isTestSource="false" />
     </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />

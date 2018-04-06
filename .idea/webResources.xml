@@ -6,6 +6,7 @@
         <entryData>
           <resourceRoots>
             <path value="file://$PROJECT_DIR$/pox-carp/pox" />
+            <path value="file://$PROJECT_DIR$/hw2/pox-carp" />
           </resourceRoots>
         </entryData>
       </entry>
