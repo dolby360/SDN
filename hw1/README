@@ -7,3 +7,47 @@ cd mininet
 git checkout -b 2.2.2
 cd ..
 mininet/util/install.sh
+
+
+"sampel_topo.py" file should be under the folder "mininet" and you also need you execute the script "runTopology.sh" from this directory.
+
+The files:
+firewall-policies.csv
+sample_controller.py
+should be under the folder "pox/ext" and you also need you execute the script "runPox.sh" from /pox directory.
+
+About the program
+
+ARP
+Firstable there is the "arp" answer.
+This functionality returns answer for every host that asks with a broadcast, details about the other host he searching.
+
+For every packet that arrive in the switch, we asking if it is arp packet.
+packet.find('arp')
+Then by what the host asked, the switch returns a proper answer.
+
+Routing
+In this assignment we have been asked to route everything, according to the topology.
+So you can see that in the connection up we enetered all the rules for every switch.
+We divided the logic by sites. siteA siteB and the other two switches that act similar.
+
+VideoSlice;
+For that we just added these rules:
+match.dl_type = 0x0800
+match.nw_proto = 6
+match.tp_dst=10000
+
+And:
+
+match.dl_type = 0x0800
+match.nw_proto = 6
+match.tp_dst=22
+
+
+
+
+
+
+
+
+
