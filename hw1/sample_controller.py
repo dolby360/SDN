@@ -117,9 +117,6 @@ def siteA(event):
     fm.actions.append(of.ofp_action_output(port=int(item[2])))
     event.connection.send(fm)
 
-
-
-
   for macs in allMacs:
     for hos in hosts:
       if macs != hos:
@@ -271,49 +268,14 @@ def getPolicies():
         policies.append(row)
 #------------------------------------------------------------------------#
 
-# def TCPA(event,vid):
-#   direction = [
-#     ['00:00:00:00:00:01','00:00:00:00:00:03',1,False],
-#     ['00:00:00:00:00:01','00:00:00:00:00:03',2,True],
-#     ['00:00:00:00:00:01','00:00:00:00:00:04',1,False],
-#     ['00:00:00:00:00:01','00:00:00:00:00:04',2,True],
-
-#     ['00:00:00:00:00:02','00:00:00:00:00:03',1,False],
-#     ['00:00:00:00:00:02','00:00:00:00:00:03',2,True],
-#     ['00:00:00:00:00:02','00:00:00:00:00:04',1,False],
-#     ['00:00:00:00:00:02','00:00:00:00:00:04',2,True],
-#   ]
-#   for item in direction:
-#     if vid == item[3]:
-#       #create flow match rule
-#       match = of.ofp_match()
-#       match.dl_src = EthAddr(item[0])
-#       match.dl_dst = EthAddr(item[1])
-
-#       fm = of.ofp_flow_mod()
-#       fm.match = match
-#       fm.hard_timeout = 300
-#       fm.idle_timeout = 100
-
-#       fm.actions.append(of.ofp_action_output(port=int(item[2])))
-#       event.connection.send(fm)
-
 def _handle_PacketIn(event):
-
   arpRequest(event)
-  # if dpidToStr(event.dpid) == '00-00-00-00-00-11':
-  #   tcpp = event.parsed.find('tcp') 
-  #   if tcpp is not None: 
-  #     print "adfsadaffadf"
-  #     if tcpp.dstport == 10000:
-  #       TCPA(event,True)
-  #     if tcpp.dstport == 10000:
-  #       TCPA(event,False)
 
 def _handle_ConnectionUp (event):
   print "Switch with dpid=%s connected" % dpidToStr(event.dpid)
   routeThisPacket(event)
   checkIfNeedToDrop(event)
+  
 def _handle_ConnectionDown(event):
   print "Switch %s disconnected" % dpidToStr(event.dpid)
 
