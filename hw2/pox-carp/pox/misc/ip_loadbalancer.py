@@ -313,7 +313,7 @@ def launch (ip, servers):
   ip = IPAddr(ip)
 
   # Boot up ARP Responder
-  from proto.arp_responder import launch as arp_launch
+  from pox.proto.arp_responder import launch as arp_launch
   arp_launch(eat_packets=False,**{str(ip):True})
   import logging
   logging.getLogger("proto.arp_responder").setLevel(logging.WARN)
