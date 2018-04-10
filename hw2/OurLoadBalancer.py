@@ -7,6 +7,8 @@ from pox.lib.packet.ethernet import ethernet
 from pox.lib.packet.arp import arp
 from pox.lib.addresses import IPAddr, EthAddr
 import random
+# import numpy as np
+import matplotlib.pyplot as plt
 
 clientList=[[IPAddr("10.0.0.1"),EthAddr("00:00:00:00:00:01"),1],
              [IPAddr("10.0.0.2"), EthAddr("00:00:00:00:00:02"),2],
@@ -20,14 +22,16 @@ serversList=[[IPAddr("10.0.0.5"), EthAddr("00:00:00:00:00:05"),5],
 
 LB_IP = IPAddr('10.1.2.3')
 LB_MAC = EthAddr('00:00:00:00:00:33')
+
+IDLE_TIMEOUT=10
+HARD_TIMEOUT=10
+
 clientMAC=None
 clientPort=None
 
-
-
-def _handle_ConnectionUp(event):
-  print "switch : "+dpidToStr(event.dpid)+" connected"
-
+serverCounter = [0,0,0,0]
+requestsCounter = 0 
+chartFlag = False
 
 def handle_arp(event, in_port):
   arp_req = event.parsed.next
@@ -53,18 +57,17 @@ def handle_arp(event, in_port):
   msg.actions.append(of.ofp_action_output(port=of.OFPP_IN_PORT))
   msg.in_port = in_port
   event.connection.send(msg)
-  
-
 
   print "%s:%s asks who is %s and get answer %s" % (arp_req.protosrc,arp_req.hwsrc,LB_IP,LB_MAC)
 
-IDLE_TIMEOUT=100
-HARD_TIMEOUT=300
-
 def handle_request ( packet, event):
+  global requestsCounter
+  global serverCounter
 
   server = random.choice(serversList)
-
+  print "Incrementing server number: {0}".format(serversList.index(server))
+  serverCounter[serversList.index(server)] += 1
+  requestsCounter += 1
   "First install the reverse rule from server to client"
 
   msg = of.ofp_flow_mod(command=of.OFPFC_MODIFY)
@@ -119,7 +122,53 @@ def handle_request ( packet, event):
   # event.connection.send(msg)
   print "Installing %s <-> %s" % (packet.next.srcip, server[0])
 
+def getMacByIp(i):
+  if i == '10.0.0.1': 
+    return '00:00:00:00:00:01'
+  if i == '10.0.0.2': 
+    return '00:00:00:00:00:02'
+  if i == '10.0.0.3': 
+    return '00:00:00:00:00:03'
+  if i == '10.0.0.4': 
+    return '00:00:00:00:00:04'
+
+def makeSrcAndDst(arp_packet):
+  if arp_packet.protodst == '10.0.0.1':
+    _dst = EthAddr('00:00:00:00:00:01')
+  if arp_packet.protodst == '10.0.0.2':
+    _dst = EthAddr('00:00:00:00:00:02')
+  if arp_packet.protodst == '10.0.0.3':
+    _dst = EthAddr('00:00:00:00:00:03')
+  if arp_packet.protodst == '10.0.0.4':
+    _dst = EthAddr('00:00:00:00:00:04')
+  return _dst, EthAddr(getMacByIp(arp_packet.protosrc))
+
+def cond(arp_packet,a,event):
+  a.hwsrc,a.hwdst = makeSrcAndDst(arp_packet)
+
+  #fake reply IP
+  a.protosrc = arp_packet.protodst
+  a.protodst = arp_packet.protosrc
+  a.hwlen = 6
+  a.protolen = 4
+  a.hwtype = arp.HW_TYPE_ETHERNET
+  a.prototype = arp.PROTO_TYPE_IP            
+
+  #create ethernet packet
+  e = ethernet()
+  e.set_payload(a)
+  e.src, e.dst = makeSrcAndDst(arp_packet)
+  e.type = ethernet.ARP_TYPE
+
+  msg = of.ofp_packet_out()
+  msg.data = e.pack()
+  #send the packet back to the source
+
+  msg.actions.append( of.ofp_action_output( port = event.port ) )
+  event.connection.send( msg )
+
 def _handle_PacketIn(event):
+  clientsIPs = [IPAddr("10.0.0.1"),IPAddr("10.0.0.2"),IPAddr("10.0.0.3"),IPAddr("10.0.0.4")]
   packet = event.parse()
 
   if packet.type == packet.LLDP_TYPE or packet.type == packet.IPV6_TYPE:
@@ -128,6 +177,21 @@ def _handle_PacketIn(event):
     msg.in_port = event.port
     event.connection.send(msg)
 
+  elif packet.type == packet.ARP_TYPE and packet.find('arp').protodst in clientsIPs:
+    packet = event.parsed
+    arp_packet = packet.find('arp')
+
+    if arp_packet is not None:      
+      if arp_packet.opcode == arp.REQUEST:
+        print "Received arp request from %s" % arp_packet.hwsrc
+        print "Creating fake arp reply"
+        #create arp packet
+        a = arp()
+        a.opcode = arp.REPLY
+        #This function decide what answer to return
+        cond(arp_packet,a,event)
+
+  #If ARP for the load balancer, then we replay a general answer for all the hosts.
   elif packet.type == packet.ARP_TYPE:
     arp_pack = packet.find('arp')
 
@@ -163,9 +227,8 @@ def _handle_PacketIn(event):
     print "ARP request from %s : %s to %s : %s" % (arp_pack.hwsrc,arp_pack.protosrc, arp_pack.hwdst,arp_pack.protodst)
     handle_arp(event, event.port)
 
-
+  #If the destination is not for the load balancer, kill the packet.
   elif packet.type == packet.IP_TYPE:
-
     if packet.next.dstip != LB_IP:
       return
 
@@ -173,15 +236,48 @@ def _handle_PacketIn(event):
 
     handle_request(packet, event)
 
+def _handle_ConnectionDown(event):
+  #print "Switch %s disconnected" % dpidToStr(event.dpid)
+  global chartFlag
+  global serverCounter
+  if chartFlag == False:
+    chartFlag = True
+    hostsNames = ['H5','H6','H7','H8']
+    plt.bar(hostsNames,serverCounter,label = 'Hosts distribution')
+    plt.xlabel('Hosts')
+    plt.ylabel('Requests')
+    plt.title('Distribution of flows\nserviced by servers')
+    plt.legend()
+    plt.show()
+
+def _handle_ConnectionUp(event):
+  print "Switch with dpid=%s connected " % dpidToStr(event.dpid)
+  global chartFlag
+  global clientList
+  chartFlag = False
+
+  for cli1 in clientList:
+    for cli2 in clientList:
+      if cli1[1] != cli2[1] and dpidToStr(event.dpid) == '00-00-00-00-01-01':
+        match = of.ofp_match()
+        match.dl_src = cli1[1]
+        match.dl_dst = cli2[1]
+        
+        fm = of.ofp_flow_mod()
+        fm.match = match
+        fm.hard_timeout = of.OFP_FLOW_PERMANENT
+        fm.idle_timeout = of.OFP_FLOW_PERMANENT
+        fm.actions.append(of.ofp_action_output(port=cli2[2]))
+        event.connection.send(fm)
+
 
 
 def launch ():
-
-
-  for server in serversList:
-      print "server : "+str(server)+" is up"
-  print "Load balancer IP : "+str(LB_IP)
-
+  # for server in serversList:
+  #     print "server : "+str(server)+" is up"
+  # print "Load balancer IP : "+str(LB_IP)
 
   # core.openflow.addListenerByName("ConnectionUp", _handle_ConnectionUp)
   core.openflow.addListenerByName("PacketIn", _handle_PacketIn)
+  core.openflow.addListenerByName("ConnectionDown", _handle_ConnectionDown)
+  core.openflow.addListenerByName("ConnectionUp", _handle_ConnectionUp)
