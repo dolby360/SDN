@@ -44,10 +44,9 @@ match.nw_proto = 6
 match.tp_dst=22
 
 
-
-
-
-
-
-
-
+mininet > h4 iperf –s –p 10000 &
+mininet > h4 iperf –s –p 22 &
+mininet > h2 iperf –c h4 –p 10000 –t 2 –i 1
+The result should show the bandwidth is about 10.00Mbits/sec
+mininet > h2 iperf –c h4 –p 22 –t 2 –i 1
+The result should show the bandwidth is about 1.00Mbit/sec
