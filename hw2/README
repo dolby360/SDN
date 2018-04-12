@@ -32,6 +32,9 @@ xterm h8
 in h8 terminal listen to port 80:
 python3 -m http.server 80 &
 
+h1 curl 10.1.2.3
+
+
 Also: the clients can ping between themselves
 
 

@@ -23,8 +23,8 @@ serversList=[[IPAddr("10.0.0.5"), EthAddr("00:00:00:00:00:05"),5],
 LB_IP = IPAddr('10.1.2.3')
 LB_MAC = EthAddr('00:00:00:00:00:33')
 
-IDLE_TIMEOUT=10
-HARD_TIMEOUT=10
+IDLE_TIMEOUT=1
+HARD_TIMEOUT=1
 
 clientMAC=None
 clientPort=None
@@ -177,10 +177,9 @@ def _handle_PacketIn(event):
     msg.in_port = event.port
     event.connection.send(msg)
 
-  elif packet.type == packet.ARP_TYPE and packet.find('arp').protodst in clientsIPs:
+  elif packet.type == packet.ARP_TYPE and packet.find('arp').protodst in clientsIPs and packet.find('arp').protosrc in clientsIPs:
     packet = event.parsed
     arp_packet = packet.find('arp')
-
     if arp_packet is not None:      
       if arp_packet.opcode == arp.REQUEST:
         print "Received arp request from %s" % arp_packet.hwsrc
