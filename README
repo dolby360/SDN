@@ -8,4 +8,5 @@ git checkout -b 2.2.2
 cd ..
 mininet/util/install.sh
 
-
+For cleaning mininet:
+sudo mn --clean
