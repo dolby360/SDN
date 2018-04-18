@@ -8,5 +8,7 @@ git checkout -b 2.2.2
 cd ..
 mininet/util/install.sh
 
+
+Some times the controller(POX) remember your previous topology and it can cause problems. So use this:
 For cleaning mininet:
 sudo mn --clean
