@@ -1,10 +1,13 @@
+#!/usr/bin/python
 from pox.core import core
 from pox.lib.util import dpidToStr
 from pox.openflow import *
 from pox.lib.addresses import IPAddr, EthAddr
 from pox.lib.packet import *
-import sys
-sys.path.append('../../myGraph')
+
+import networkx as nx
+import matplotlib.pyplot as plt
+import random
 
 def _handle_PacketIn(event):
   #print "packet in to = %s" % dpidToStr(event.dpid)
