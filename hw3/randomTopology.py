@@ -44,22 +44,77 @@ def exportJson(G):
     with open('../pox/ext/data.txt', 'w') as outfile:
         json.dump(data, outfile)
 
+
+
 class SampleTopology(Topo):
     def __init__(self):
         Topo.__init__(self)
+
+    def makeTopoFromNX(self,G):
+        allHosts = []
+        allSwitches = []
+
+        hostList = []
+        switchesList = []
+        for i in range(0,G.nodes.__len__()):
+            if G.nodes[i]['data'] == 'host':
+                hostList.append(i)
+            if G.nodes[i]['data'] == 'switch':
+                switchesList.append(i)
+
+        for i in hostList:
+            _ip = '10.0.0.' + str(i)
+            if i < 10:
+                _mac = '00:00:00:00:00:0' + str(i)
+            if i >= 10:
+                _mac = '00:00:00:00:00:' + str(i)
+            _name = 'h' + str(i)
+            allHosts.append(self.addHost(_name,ip=_ip,mac=_mac))
+        for i in switchesList:
+            if i < 10:
+                _dpid = '00:00:00:00:00:0' + str(i)
+            if i >= 10:
+                _dpid = '00:00:00:00:00:' + str(i)
+            _name = 's' + str(i)
+            allSwitches.append(self.addSwitch(_name,dpid=_dpid))
+        print ''
+        print 'HOSTS'
+        print allHosts
+        print ''
+        print 'SITCHES'
+        print allSwitches
+        print ''
+        port = 0
+        allEdgesDict = {}
+        for i in switchesList:
+            #Make link between every edge
+            for j in list(G.adj[i]):
+                if not allEdgesDict.has_key((str(j),str(i))) and not allEdgesDict.has_key((str(i),str(j))):
+                    if j in hostList:
+                        h1 = 'h' + str(j)
+                    if j in switchesList:
+                        h1 = 's' + str(j)
+                    if i in switchesList:
+                        h2 = 's' + str(i)
+                    if i in hostList:
+                        h2 = 'h' + str(i)
+                    # print '{0}  {1}  {2}'.format(j,i,port)
+                    self.addLink(h1,h2,port1=port, port2=(port+1))
+                    allEdgesDict[(str(i),str(j))] = port
+                    allEdgesDict[(str(j),str(i))] = port+1
+                    port+=2
+        print allEdgesDict
+
+        # # Add links
+        # self.addLink(h1,s1,port1=1, port2=3)
+
+
     def build(self):   
         switchesNumber = 10
         G = BuildSwitchs(switchesNumber,0.1)
         G = BuildHosts(5,G,switchesNumber)
         exportJson(G)
-
-        # Add hosts and switches
-        h1 = self.addHost('h1', ip='10.0.0.1', mac='00:00:00:00:00:01')
-        s1 = self.addSwitch('s1', dpid='00:00:00:00:00:11')
-
-        # Add links
-        self.addLink(h1,s1,port1=1, port2=3)
-
+        self.makeTopoFromNX(G)
 
 topo = SampleTopology()
 

@@ -32,7 +32,6 @@ def drowGraph(G):
         hostList.append(i)
       if G.nodes[i]['data'] == 'switch':
         switchesList.append(i)
-    print hostList
     nx.draw_networkx_nodes(G, pos, switchesList, node_size=500, node_color='b')
     nx.draw_networkx_nodes(G, pos, hostList, node_size=500, node_color='r')
 
