@@ -10,7 +10,6 @@ sudo pip install networkx
 **General explanations on the program:**
 In the topology we use networkx for generating random topology.
 Then we print the json file of the topology in the pox folder: "pox/ext" to let the controller read the file.
-
 Then in the controller we read the file to hold the topology. That way we are able to be aware of the topology and calculate shortest path.
 
 * I added a picture called "Graph and net.png" that shows the connection between the networkx and the actual topology.
