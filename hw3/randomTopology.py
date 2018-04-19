@@ -11,38 +11,47 @@ import random
 import json
 from networkx.readwrite import json_graph
 
+#n, i.e. total number of nodes
+#p, i.e. the value of the probability
+def BuildSwitchs(n,p):
+    l = [] 
+    #Create an empty graph add n nodes to it
+    G = nx.Graph()
+    for i in range(0,n):
+        G.add_node(i,data='switch')
+    for t1 in range(0,n):
+        for t2 in range(0,n):
+            if t1 != t2 and random.random() < p:
+                G.add_edge(t1,t2)
+                l.append((t1,t2))
+    G.add_edges_from(l)
+    switchesList = [i for i in range(n)]
+    G.add_path(switchesList)
+    return G
+
+#G - graph
+def BuildHosts(hostsNumber,G,switchesNumber):
+    for i in range(switchesNumber, (switchesNumber - 1) + hostsNumber):
+        G.add_node(i,data='host')
+    #Adding edge between hosts to random switch.
+    for i in range(switchesNumber, (switchesNumber - 1) + hostsNumber):
+        nodeToAttach = random.randint(0,switchesNumber-1)
+        G.add_edge(i,nodeToAttach)
+    return G
+
+def exportJson(G):
+    data = json_graph.node_link_data(G)
+    with open('../pox/ext/data.txt', 'w') as outfile:
+        json.dump(data, outfile)
+
 class SampleTopology(Topo):
     def __init__(self):
         Topo.__init__(self)
-
-
     def build(self):   
-        l = [] 
-        #n, i.e. total number of nodes
-        n = 10
-        #p, i.e. the value of the probability
-        p = 0.1
-        #Create an empty graph add n nodes to it
-        G = nx.Graph()
-
-        for i in range(0,n):
-            G.add_node(i)
-        for t1 in range(0,n):
-            for t2 in range(0,n):
-                if t1 != t2 and random.random() < p:
-                    G.add_edge(t1,t2)
-                    l.append((t1,t2))
-        G.add_edges_from(l)
-        switchesList = [i for i in range(n)]
-        G.add_path(switchesList)
-        # pos = nx.spring_layout(G)
-        # drawing setup for switches
-        # nx.draw_networkx_nodes(G,pos,nodelis=switchesList,node_color='b',node_size=500,alpha=0.8)
-        # nx.draw_networkx_edges(G,pos,edgelist=l,width=8,alpha=0.5,edge_color='y')
-
-        data = json_graph.node_link_data(G)
-        with open('../pox/ext/data.txt', 'w') as outfile:
-            json.dump(data, outfile)
+        switchesNumber = 10
+        G = BuildSwitchs(switchesNumber,0.1)
+        G = BuildHosts(5,G,switchesNumber)
+        exportJson(G)
 
         # Add hosts and switches
         h1 = self.addHost('h1', ip='10.0.0.1', mac='00:00:00:00:00:01')
