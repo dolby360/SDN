@@ -13,10 +13,17 @@ Then we print the json file of the topology in the pox folder: "pox/ext" to let 
 
 Then in the controller we read the file to hold the topology. That way we are able to be aware of the topology and calculate shortest path.
 
-* I added a picture called "Graph and net.png" that shows the connection between the networkx and the actual topology.
+* Networkx and topology:
+I added a picture called "Graph and net.png" that shows the connection between the networkx and the actual topology.
 You can see that hosts are painted in red and switches are painted in blue. And in the terminal you can see the for every edge in the graph there is edge in the topology.
 
-* I decided to make rules every ARP request that come into the controller.
-This is the way it works:
+* ARP:
 Let's say that h1 sends request for h2.
-First, before the host sends any request he sends an ARP request. So there I answer him, and on the way I make a rules for routing all packets from h1 to h2. This route will stay permanent as long as the controller is runing, because this rules made after I calculated the shortest path, and I assume that nothing will change in the topology while the controller is working.
+First, before the host sends any request he sends an ARP request. So there I answer him with a fake ARP replay.
+
+* Rules:
+In connection up I have a flag. I use it to read the JSON file when the flag = True then I know that this is the first switch. And that way I also know that mininet finished to build topology and he also updated the JSON file so I can read it.
+	*Initial rules:
+	There I just checking all shortest path for all hosts and I make a list of all shortest path lists.
+	*Make rule:
+	Now after I have all the switches that involved in the all Shortest paths list of lists I know which switches needs rules and there I take care of this

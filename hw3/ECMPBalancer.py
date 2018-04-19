@@ -13,21 +13,23 @@ import random
 
 flag = True
 G = None 
+allShortestPath = []
 
 def read_json_file(filename):
     with open(filename, 'r') as f:
       js_graph = json.load(f)
     return json_graph.node_link_graph(js_graph)
 
-def makeRules(event):
+def showShortestPath(event):
   global G
   packet = event.parsed
   arp_packet = packet.find('arp')
   print '----------------------------------------------------------'
   hostDst = int(str(arp_packet.protodst).split('.')[3])
   hostSrc = int(str(arp_packet.protosrc).split('.')[3])
-  print(nx.shortest_path(G,source=hostSrc,target=hostDst))
-  drowGraph(G)
+  listOfTheShortestPath = nx.shortest_path(G,source=hostSrc,target=hostDst)
+  print listOfTheShortestPath
+  drowGraph(G,listOfTheShortestPath)
   print '-----------------------------------------------------------'
 
 def arpRequest(event):
@@ -66,17 +68,17 @@ def arpRequest(event):
       #send the packet back to the source
       msg.actions.append( of.ofp_action_output( port = event.port ) )
       event.connection.send( msg )
-      makeRules(event)
+      showShortestPath(event)
 
 def _handle_PacketIn(event):
   #print "packet in to = %s" % dpidToStr(event.dpid)
   arpRequest(event)
 
-def drowGraph(G):
+def drowGraph(G,edgesToPaint = None):
     hostList = []
     switchesList = []
     pos = nx.networkx.spring_layout(G)
-
+  
     for i in range(0,G.nodes.__len__()):
       if G.nodes[i]['data'] == 'host':
         hostList.append(i)
@@ -85,11 +87,67 @@ def drowGraph(G):
     nx.draw_networkx_nodes(G, pos, switchesList, node_size=500, node_color='b')
     nx.draw_networkx_nodes(G, pos, hostList, node_size=500, node_color='r')
 
-    nx.draw_networkx_edges(G,pos)
+    if edgesToPaint:
+      tuplesOfSpecialEdges = []
+      for i in range(0,edgesToPaint.__len__()-1):
+        tuplesOfSpecialEdges.append((edgesToPaint[i],edgesToPaint[i+1]))
+      # outherEdges = list(set(G.edges)-set(tuplesOfSpecialEdges)) + list(set(tuplesOfSpecialEdges)-set(G.edges))      
+      nx.draw_networkx_edges(G,pos, width=2.0,edge_color='k')
+      nx.draw_networkx_edges(G,pos,edgelist=tuplesOfSpecialEdges, width=2.3,edge_color='r')
+    else:
+      nx.draw_networkx_edges(G,pos)
     nx.draw_networkx_labels(G,pos)
     plt.show()
 
+def makeRules(event):
+  for i in allShortestPath:
+    if int(dpidToStr(event.dpid).split('-')[5]) in i:
+      print i
 
+  # outPort
+  # #create flow match rule
+  # match = of.ofp_match()
+  # match.dl_src = EthAddr(item[0])
+  # match.dl_dst = EthAddr(item[1])
+
+  # match.dl_type = 0x0800
+  # match.nw_proto = 6
+  # match.tp_dst=10000
+  # fm = of.ofp_flow_mod()
+  # fm.match = match
+  # fm.hard_timeout = 300
+  # fm.idle_timeout = 100
+  # fm.actions.append(of.ofp_action_output(port=int(item[3])))
+  # event.connection.send(fm)
+
+  # match = of.ofp_match()
+  # match.dl_src = EthAddr(item[0])
+  # match.dl_dst = EthAddr(item[1])
+
+  # fm = of.ofp_flow_mod()
+  # fm.match = match
+  # fm.hard_timeout = 300
+  # fm.idle_timeout = 100
+
+  # fm.actions.append(of.ofp_action_output(port=int(item[2])))
+  # event.connection.send(fm)
+def makeInitialRules(event):
+  global G
+  global allShortestPath
+  hostList = []
+  switchesList = []
+  for i in range(0,G.nodes.__len__()):
+    if G.nodes[i]['data'] == 'host':
+      hostList.append(i)
+    if G.nodes[i]['data'] == 'switch':
+      switchesList.append(i)
+
+  for i in hostList:
+    for j in hostList:
+      if i != j:
+        SPbetweenToHosts = nx.shortest_path(G,source=i,target=j)
+        allShortestPath.append(SPbetweenToHosts)
+  
 def _handle_ConnectionUp (event):
   global flag
   global G
@@ -98,10 +156,13 @@ def _handle_ConnectionUp (event):
     G = read_json_file("ext/data.txt")
     drowGraph(G)
     flag = False
-    
+    makeInitialRules(event)
+  makeRules(event)
 
 def _handle_ConnectionDown(event):
   print "Switch %s disconnected" % dpidToStr(event.dpid)
+  global flag
+  flag = True
 
 def launch ():
   core.openflow.addListenerByName("ConnectionUp", _handle_ConnectionUp)
