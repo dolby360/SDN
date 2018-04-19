@@ -1,4 +1,8 @@
+Installation:
 sudo pip install networkx
 
-
-myGraph.py should be under main folder alongside to the folders mininet and pox
+Settings:
+"ECMPBalancer.py" should be under "pox/ext/"
+"runPox.sh" should be under "pox/"
+"runTopology.sh" should be under "mininet/"
+"randomTopology.py" should be under "mininet/"
