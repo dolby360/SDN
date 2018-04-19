@@ -12,6 +12,7 @@ import matplotlib.pyplot as plt
 import random
 
 flag = True
+G = None 
 
 def read_json_file(filename):
     with open(filename, 'r') as f:
@@ -19,7 +20,15 @@ def read_json_file(filename):
     return json_graph.node_link_graph(js_graph)
 
 def makeRules(event):
-  x =1
+  global G
+  packet = event.parsed
+  arp_packet = packet.find('arp')
+  print '----------------------------------------------------------'
+  hostDst = int(str(arp_packet.protodst).split('.')[3])
+  hostSrc = int(str(arp_packet.protosrc).split('.')[3])
+  print(nx.shortest_path(G,source=hostSrc,target=hostDst))
+  drowGraph(G)
+  print '-----------------------------------------------------------'
 
 def arpRequest(event):
   packet = event.parsed
@@ -59,8 +68,6 @@ def arpRequest(event):
       event.connection.send( msg )
       makeRules(event)
 
-
-
 def _handle_PacketIn(event):
   #print "packet in to = %s" % dpidToStr(event.dpid)
   arpRequest(event)
@@ -85,6 +92,7 @@ def drowGraph(G):
 
 def _handle_ConnectionUp (event):
   global flag
+  global G
   print "Switch with dpid=%s connected" % dpidToStr(event.dpid)
   if flag:
     G = read_json_file("ext/data.txt")
