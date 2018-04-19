@@ -18,9 +18,52 @@ def read_json_file(filename):
       js_graph = json.load(f)
     return json_graph.node_link_graph(js_graph)
 
+def makeRules(event):
+  x =1
+
+def arpRequest(event):
+  packet = event.parsed
+  arp_packet = packet.find('arp')
+  if arp_packet is not None:      
+    if arp_packet.opcode == arp.REQUEST:
+      print "Received arp request from %s" % arp_packet.hwsrc
+      print "Creating fake arp reply"
+      #create arp packet
+      a = arp()
+      a.opcode = arp.REPLY
+      a.hwdst = arp_packet.hwsrc
+      #FIXME: Maybe in the future we can use cleverer logic here to response ARP request.
+      #Now I just assume that if ip ends with 10 for example 10.0.0.10 then the mac address is 00:00:00:00:00:10
+      #One way I that can think of is to save mac addresses in JSON file and make more cleverers rules.
+      hostNumber = int(str(arp_packet.protodst).split('.')[3])
+      if hostNumber < 10:
+        a.hwsrc = EthAddr('00:00:00:00:00:0' + str(hostNumber))
+      else:
+        a.hwsrc = EthAddr('00:00:00:00:00:' + str(hostNumber))
+      #fake reply IP
+      a.protosrc = arp_packet.protodst
+      a.protodst = arp_packet.protosrc
+      a.hwlen = 6
+      a.protolen = 4
+      a.hwtype = arp.HW_TYPE_ETHERNET
+      a.prototype = arp.PROTO_TYPE_IP            
+      #create ethernet packet
+      e = ethernet()
+      e.set_payload(a)
+      e.src, e.dst = a.hwsrc, a.hwdst
+      e.type = ethernet.ARP_TYPE
+      msg = of.ofp_packet_out()
+      msg.data = e.pack()
+      #send the packet back to the source
+      msg.actions.append( of.ofp_action_output( port = event.port ) )
+      event.connection.send( msg )
+      makeRules(event)
+
+
+
 def _handle_PacketIn(event):
   #print "packet in to = %s" % dpidToStr(event.dpid)
-  x = 1
+  arpRequest(event)
 
 def drowGraph(G):
     hostList = []

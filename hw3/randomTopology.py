@@ -39,7 +39,7 @@ def BuildHosts(hostsNumber,G,switchesNumber):
         G.add_edge(i,nodeToAttach)
     return G
 
-def exportJson(G):
+def exportNetworkxJson(G):
     data = json_graph.node_link_data(G)
     with open('../pox/ext/data.txt', 'w') as outfile:
         json.dump(data, outfile)
@@ -103,17 +103,12 @@ class SampleTopology(Topo):
                     allEdgesDict[(str(i),str(j))] = port
                     allEdgesDict[(str(j),str(i))] = port+1
                     port+=2
-        print allEdgesDict
-
-        # # Add links
-        # self.addLink(h1,s1,port1=1, port2=3)
-
 
     def build(self):   
         switchesNumber = 10
         G = BuildSwitchs(switchesNumber,0.1)
         G = BuildHosts(5,G,switchesNumber)
-        exportJson(G)
+        exportNetworkxJson(G)
         self.makeTopoFromNX(G)
 
 topo = SampleTopology()
