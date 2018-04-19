@@ -1,8 +1,14 @@
-Installation:
+**Installation:**
 sudo pip install networkx
 
-Settings:
+**Settings:**
 "ECMPBalancer.py" should be under "pox/ext/"
 "runPox.sh" should be under "pox/"
 "runTopology.sh" should be under "mininet/"
 "randomTopology.py" should be under "mininet/"
+
+**General explanations on the program:**
+In the topology we use networkx for generating random topology.
+Then we print the json file of the topology in the pox folder: "pox/ext" to let the controller read the file.
+
+Then in the controller we read the file to hold the topology. That way we are able to be aware of the topology and calculate shortest path.
