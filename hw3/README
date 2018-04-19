@@ -23,7 +23,8 @@ First, before the host sends any request he sends an ARP request. So there I ans
 
 * Rules:
 In connection up I have a flag. I use it to read the JSON file when the flag = True then I know that this is the first switch. And that way I also know that mininet finished to build topology and he also updated the JSON file so I can read it.
-	*Initial rules:
-	There I just checking all shortest path for all hosts and I make a list of all shortest path lists.
-	*Make rule:
-	Now after I have all the switches that involved in the all Shortest paths list of lists I know which switches needs rules and there I take care of this
+
+--Initial rules:--
+There I just checking all shortest path for all hosts and I make a list of all shortest path lists.
+--Make rule:--
+Now after I have all the switches that involved in the all Shortest paths list of lists I know which switches needs rules and there I take care of this
