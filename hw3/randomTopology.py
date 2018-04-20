@@ -89,7 +89,7 @@ class SampleTopology(Topo):
         for i in switchesList:
             #Make link between every edge
             for j in list(G.adj[i]):
-                if not allEdgesDict.has_key((str(j),str(i))) and not allEdgesDict.has_key((str(i),str(j))):
+                if not allEdgesDict.has_key(str((str(j),str(i)))): #and not allEdgesDict.has_key(str((str(i),str(j)))):
                     if j in hostList:
                         h1 = 'h' + str(j)
                     if j in switchesList:
@@ -100,10 +100,15 @@ class SampleTopology(Topo):
                         h2 = 'h' + str(i)
                     # print '{0}  {1}  {2}'.format(j,i,port)
                     self.addLink(h1,h2,port1=port, port2=(port+1))
-                    allEdgesDict[(str(i),str(j))] = port
-                    allEdgesDict[(str(j),str(i))] = port+1
+                    allEdgesDict[str((str(i),str(j)))] = port
+                    allEdgesDict[str((str(j),str(i)))] = port+1
                     port+=2
-
+        # j = json.dumps(allEdgesDict)
+        # f = open('../pox/ext/allEdgesDict.txt', 'w')
+        # print >> f, j
+        # f.close()
+        with open('../pox/ext/allEdgesDict.txt', 'w') as fp:
+            json.dump(allEdgesDict, fp)
     def build(self):   
         switchesNumber = 10
         G = BuildSwitchs(switchesNumber,0.1)

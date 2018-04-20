@@ -14,6 +14,8 @@ import random
 flag = True
 G = None 
 allShortestPath = []
+direction = {}
+SPgraphShowHolder = []
 
 def read_json_file(filename):
     with open(filename, 'r') as f:
@@ -51,6 +53,8 @@ def arpRequest(event):
         a.hwsrc = EthAddr('00:00:00:00:00:0' + str(hostNumber))
       else:
         a.hwsrc = EthAddr('00:00:00:00:00:' + str(hostNumber))
+      
+      print 'Response {0} to port {1}'.format(a.hwsrc, event.port) 
       #fake reply IP
       a.protosrc = arp_packet.protodst
       a.protodst = arp_packet.protosrc
@@ -68,7 +72,10 @@ def arpRequest(event):
       #send the packet back to the source
       msg.actions.append( of.ofp_action_output( port = event.port ) )
       event.connection.send( msg )
-      showShortestPath(event)
+      global SPgraphShowHolder
+      if (a.protosrc,a.protodst) not in SPgraphShowHolder and (a.protodst,a.protosrc) not in SPgraphShowHolder:
+        showShortestPath(event)
+        SPgraphShowHolder.append((a.protosrc,a.protodst))
 
 def _handle_PacketIn(event):
   #print "packet in to = %s" % dpidToStr(event.dpid)
@@ -99,43 +106,73 @@ def drowGraph(G,edgesToPaint = None):
     nx.draw_networkx_labels(G,pos)
     plt.show()
 
+def createTheRule(event,h1,h2,outPort):
+  match = of.ofp_match()
+  match.dl_src = EthAddr(h1)
+  match.dl_dst = EthAddr(h2)
+
+  fm = of.ofp_flow_mod()
+  fm.match = match
+  fm.hard_timeout = 300
+  fm.idle_timeout = 100
+
+  fm.actions.append(of.ofp_action_output(port=int(outPort)))
+  event.connection.send(fm)
+
 def makeRules(event):
-  for i in allShortestPath:
-    if int(dpidToStr(event.dpid).split('-')[5]) in i:
-      print i
+  global G
+  global direction
+  hostList = []
+  switchesList = []
+  for i in range(0,G.nodes.__len__()):
+    if G.nodes[i]['data'] == 'host':
+      hostList.append(i)
+    if G.nodes[i]['data'] == 'switch':
+      switchesList.append(i)
+  for i in hostList:
+    for j in hostList:
+      if i != j:
+        SPbetweenToHosts = nx.shortest_path(G,source=i,target=j)
+        try:
+          numberOfThisSwitch = int(dpidToStr(event.dpid).split('-')[5])
+          if int(dpidToStr(event.dpid).split('-')[0]) != 0 or int(dpidToStr(event.dpid).split('-')[1]) != 0:
+            numberOfThisSwitch = 0
+        except:
+          numberOfThisSwitch = 0
+        if numberOfThisSwitch in SPbetweenToHosts:
+          indexOfThisSwitch = SPbetweenToHosts.index(numberOfThisSwitch)
+          if i < 10:
+            h1 = '00:00:00:00:00:0' + str(i)
+          if i >= 10:
+            h1 = '00:00:00:00:00:' + str(i)
+          if j < 10:
+            h2 = '00:00:00:00:00:0' + str(j)
+          if j >= 10:
+            h2 = '00:00:00:00:00:' + str(j)
+          outPort = direction[(SPbetweenToHosts[indexOfThisSwitch + 1],numberOfThisSwitch)]
+          # if numberOfThisSwitch == 0:
+            # print '*/*/*/*/*/*/*/*/*/*/*/*/*/* /*/ */ */ */*/ */ * /*/ */ * /* /*/ */* /* *  '
+            # print 'Out port'
+            # print outPort
+            # print '*/*/*/*/*/*/*/*/*/*/*/*/*/* /*/ */ */ */*/ */ * /*/ */ * /* /*/ */* /* *  '
+            # print '*/*/*/*/*/*/*/*/*/*/*/*/*/* /*/ */ */ */*/ */ * /*/ */ * /* /*/ */* /* *  '
+            # print 'Host1  host2'
+            # print str(i) + '  ' + str(j)
+            # print str(numberOfThisSwitch) + '   ' + str(SPbetweenToHosts[indexOfThisSwitch + 1])
+            # print '*/*/*/*/*/*/*/*/*/*/*/*/*/* /*/ */ */ */*/ */ * /*/ */ * /* /*/ */* /* *  '
+            # print '*/*/*/*/*/*/*/*/*/*/*/*/*/* /*/ */ */ */*/ */ * /*/ */ * /* /*/ */* /* *  '
+            # print 'Dict'
+            # print direction
+            # print '*/*/*/*/*/*/*/*/*/*/*/*/*/* /*/ */ */ */*/ */ * /*/ */ * /* /*/ */* /* *  '
+          createTheRule(event,h1,h2,outPort)
+       
 
-  # outPort
-  # #create flow match rule
-  # match = of.ofp_match()
-  # match.dl_src = EthAddr(item[0])
-  # match.dl_dst = EthAddr(item[1])
-
-  # match.dl_type = 0x0800
-  # match.nw_proto = 6
-  # match.tp_dst=10000
-  # fm = of.ofp_flow_mod()
-  # fm.match = match
-  # fm.hard_timeout = 300
-  # fm.idle_timeout = 100
-  # fm.actions.append(of.ofp_action_output(port=int(item[3])))
-  # event.connection.send(fm)
-
-  # match = of.ofp_match()
-  # match.dl_src = EthAddr(item[0])
-  # match.dl_dst = EthAddr(item[1])
-
-  # fm = of.ofp_flow_mod()
-  # fm.match = match
-  # fm.hard_timeout = 300
-  # fm.idle_timeout = 100
-
-  # fm.actions.append(of.ofp_action_output(port=int(item[2])))
-  # event.connection.send(fm)
 def makeInitialRules(event):
   global G
   global allShortestPath
   hostList = []
   switchesList = []
+  global direction
   for i in range(0,G.nodes.__len__()):
     if G.nodes[i]['data'] == 'host':
       hostList.append(i)
@@ -147,7 +184,12 @@ def makeInitialRules(event):
       if i != j:
         SPbetweenToHosts = nx.shortest_path(G,source=i,target=j)
         allShortestPath.append(SPbetweenToHosts)
-  
+        edgesDict = eval(open('ext/allEdgesDict.txt', 'r').read())
+        for i in edgesDict:
+          keysOfRouting = (int(i.replace('(','').replace(')','').replace('\'','').replace(',','').split(' ')[0]),int(i.replace('(','').replace(')','').replace('\'','').replace(',','').split(' ')[1]))
+          direction[keysOfRouting] = edgesDict[i] 
+        
+        break
 def _handle_ConnectionUp (event):
   global flag
   global G
