@@ -5,6 +5,10 @@ from pox.openflow import *
 from pox.lib.addresses import IPAddr, EthAddr
 from pox.lib.packet import *
 from networkx.readwrite import json_graph
+from threading import Thread
+from time import sleep
+from multiprocessing import Process
+
 
 import json
 import networkx as nx
@@ -16,6 +20,7 @@ G = None
 allShortestPath = []
 direction = {}
 SPgraphShowHolder = []
+SPgraphShowHolder_secoundTime = []
 
 def read_json_file(filename):
     with open(filename, 'r') as f:
@@ -74,8 +79,10 @@ def arpRequest(event):
       event.connection.send( msg )
       global SPgraphShowHolder
       if (a.protosrc,a.protodst) not in SPgraphShowHolder and (a.protodst,a.protosrc) not in SPgraphShowHolder:
-        showShortestPath(event)
         SPgraphShowHolder.append((a.protosrc,a.protodst))
+      elif (a.protosrc,a.protodst) not in SPgraphShowHolder_secoundTime and (a.protodst,a.protosrc) not in SPgraphShowHolder_secoundTime:
+        SPgraphShowHolder_secoundTime.append((a.protosrc,a.protodst))
+        showShortestPath(event)
 
 def _handle_PacketIn(event):
   #print "packet in to = %s" % dpidToStr(event.dpid)
@@ -190,6 +197,7 @@ def makeInitialRules(event):
           direction[keysOfRouting] = edgesDict[i] 
         
         break
+
 def _handle_ConnectionUp (event):
   global flag
   global G
