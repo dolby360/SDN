@@ -1,3 +1,7 @@
+hw1 - Build topology and navigate packets by there types.
+hw2 - Load Balancer.
+hw3 - Navigate packets in a random topology. 
+
 To install mininet and pox.
 
 Clone the repository
